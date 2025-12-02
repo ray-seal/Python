@@ -1,0 +1,12 @@
+{
+  "name": "pypet",
+  "version": "1.0.0",
+  "description": "A fun game to learn Python by caring for your 8-bit snake pet!",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": ["python", "learning", "game", "pwa", "snake", "pet"],
+  "author": "",
+  "license": "MIT"
+}

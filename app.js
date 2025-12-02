@@ -1,0 +1,964 @@
+// PyPet - Learn Python with your 8-bit Snake!
+// Main Application Logic
+
+// ==================== GAME STATE ====================
+const gameState = {
+    pet: {
+        name: "Snakey",
+        hunger: 80,
+        happiness: 70,
+        energy: 90,
+        level: 1,
+        xp: 0,
+        xpToNextLevel: 100
+    },
+    inventory: {
+        "apple": 3,
+        "mouse": 2,
+        "toy": 1,
+        "bed": 1
+    },
+    shop: {
+        "apple": { price: 10, description: "A juicy apple for your snake" },
+        "mouse": { price: 25, description: "A tasty treat!" },
+        "toy": { price: 50, description: "A fun toy to play with" },
+        "golden_apple": { price: 100, description: "Restores all hunger!" }
+    },
+    coins: 50,
+    tutorialStep: 0,
+    inTutorial: false,
+    inMaze: false,
+    maze: null,
+    commandHistory: [],
+    historyIndex: -1
+};
+
+// ==================== MAZE STATE ====================
+const mazeState = {
+    grid: [],
+    playerX: 1,
+    playerY: 1,
+    playerDir: 'east',
+    goalX: 0,
+    goalY: 0,
+    width: 10,
+    height: 10
+};
+
+// ==================== 8-BIT SNAKE GRAPHICS ====================
+const snakeSprites = {
+    // 8-bit pixel art for snake (each row is 16 pixels wide)
+    idle: [
+        "................",
+        "....▓▓▓▓▓▓......",
+        "...▓░░░░░░▓.....",
+        "..▓░██░░██░▓....",
+        "..▓░░░░░░░░▓....",
+        "..▓░░▓▓▓▓░░▓....",
+        "...▓░░░░░░▓.....",
+        "....▓▓▓▓▓▓......",
+        ".....▓▓▓........",
+        "......▓▓........",
+        ".....▓▓▓........",
+        "....▓▓▓▓........",
+        "...▓▓▓▓▓........",
+        "..▓▓▓▓▓▓........",
+        ".▓▓▓▓▓▓.........",
+        "▓▓▓▓▓▓.........."
+    ],
+    happy: [
+        "................",
+        "....▓▓▓▓▓▓......",
+        "...▓░░░░░░▓.....",
+        "..▓░▀▀░░▀▀░▓....",
+        "..▓░░░░░░░░▓....",
+        "..▓░░████░░▓....",
+        "...▓░░░░░░▓.....",
+        "....▓▓▓▓▓▓......",
+        ".....▓▓▓........",
+        "......▓▓........",
+        ".....▓▓▓........",
+        "....▓▓▓▓........",
+        "...▓▓▓▓▓........",
+        "..▓▓▓▓▓▓........",
+        ".▓▓▓▓▓▓.........",
+        "▓▓▓▓▓▓.........."
+    ],
+    sleeping: [
+        "................",
+        "....▓▓▓▓▓▓......",
+        "...▓░░░░░░▓.....",
+        "..▓░──░░──░▓..zZ",
+        "..▓░░░░░░░░▓....",
+        "..▓░░░░░░░░▓....",
+        "...▓░░░░░░▓.....",
+        "....▓▓▓▓▓▓......",
+        ".....▓▓▓........",
+        "......▓▓........",
+        ".....▓▓▓........",
+        "....▓▓▓▓........",
+        "...▓▓▓▓▓........",
+        "..▓▓▓▓▓▓........",
+        ".▓▓▓▓▓▓.........",
+        "▓▓▓▓▓▓.........."
+    ],
+    hungry: [
+        "................",
+        "....▓▓▓▓▓▓......",
+        "...▓░░░░░░▓.....",
+        "..▓░██░░██░▓....",
+        "..▓░░░░░░░░▓....",
+        "..▓░░▓▓▓▓░░▓....",
+        "..▓░▓░░░░▓░▓....",
+        "...▓▓░░░░▓▓.....",
+        "....▓▓▓▓▓▓......",
+        ".....▓▓▓........",
+        "......▓▓........",
+        ".....▓▓▓........",
+        "....▓▓▓▓........",
+        "...▓▓▓▓▓........",
+        "..▓▓▓▓▓▓........",
+        ".▓▓▓▓▓▓........."
+    ]
+};
+
+// Color palette for 8-bit graphics
+const colors = {
+    '▓': '#4ecca3', // Snake body green
+    '░': '#a8e6cf', // Snake lighter green
+    '█': '#1a1a2e', // Eyes dark
+    '▀': '#1a1a2e', // Happy eyes
+    '─': '#1a1a2e', // Sleeping eyes
+    '.': 'transparent',
+    'z': '#ffd369',
+    'Z': '#ffd369'
+};
+
+// ==================== CANVAS RENDERING ====================
+let petCanvas, petCtx, mazeCanvas, mazeCtx;
+let animationFrame = 0;
+
+function initCanvas() {
+    petCanvas = document.getElementById('pet-canvas');
+    petCtx = petCanvas.getContext('2d');
+    mazeCanvas = document.getElementById('maze-canvas');
+    mazeCtx = mazeCanvas.getContext('2d');
+    
+    // Set pixel-perfect rendering
+    petCtx.imageSmoothingEnabled = false;
+    mazeCtx.imageSmoothingEnabled = false;
+}
+
+function drawSnake(state = 'idle') {
+    const sprite = snakeSprites[state] || snakeSprites.idle;
+    const pixelSize = 12;
+    const offsetX = 20;
+    const offsetY = 10;
+    
+    // Clear canvas
+    petCtx.fillStyle = '#0f3460';
+    petCtx.fillRect(0, 0, petCanvas.width, petCanvas.height);
+    
+    // Add slight bounce animation
+    const bounceOffset = state === 'happy' ? Math.sin(animationFrame * 0.2) * 5 : 0;
+    
+    // Draw each pixel
+    sprite.forEach((row, y) => {
+        [...row].forEach((pixel, x) => {
+            if (pixel !== '.' && colors[pixel]) {
+                petCtx.fillStyle = colors[pixel];
+                petCtx.fillRect(
+                    offsetX + x * pixelSize,
+                    offsetY + y * pixelSize + bounceOffset,
+                    pixelSize,
+                    pixelSize
+                );
+            }
+        });
+    });
+    
+    // Draw pet name
+    petCtx.fillStyle = '#ffd369';
+    petCtx.font = '16px "Press Start 2P", monospace';
+    petCtx.textAlign = 'center';
+    petCtx.fillText(gameState.pet.name, petCanvas.width / 2, petCanvas.height - 10);
+}
+
+function getSnakeState() {
+    if (gameState.pet.energy < 20) return 'sleeping';
+    if (gameState.pet.hunger < 30) return 'hungry';
+    if (gameState.pet.happiness > 70) return 'happy';
+    return 'idle';
+}
+
+function updatePetDisplay() {
+    drawSnake(getSnakeState());
+    
+    // Update stat bars
+    updateStatBar('hunger-bar', gameState.pet.hunger);
+    updateStatBar('happiness-bar', gameState.pet.happiness);
+    updateStatBar('energy-bar', gameState.pet.energy);
+    updateStatBar('xp-bar', (gameState.pet.xp / gameState.pet.xpToNextLevel) * 100);
+    
+    document.getElementById('level-display').textContent = gameState.pet.level;
+}
+
+function updateStatBar(id, value) {
+    const bar = document.getElementById(id);
+    bar.style.width = `${Math.max(0, Math.min(100, value))}%`;
+    
+    if (value < 30 && !id.includes('xp')) {
+        bar.classList.add('low');
+    } else {
+        bar.classList.remove('low');
+    }
+}
+
+// ==================== MAZE GAME ====================
+function generateMaze() {
+    const { width, height } = mazeState;
+    // Initialize grid with walls
+    mazeState.grid = Array(height).fill(null).map(() => Array(width).fill(1));
+    
+    // Simple maze generation using recursive backtracker
+    function carve(x, y) {
+        mazeState.grid[y][x] = 0;
+        const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        shuffleArray(directions);
+        
+        for (const [dx, dy] of directions) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx > 0 && nx < width - 1 && ny > 0 && ny < height - 1 && mazeState.grid[ny][nx] === 1) {
+                mazeState.grid[y + dy/2][x + dx/2] = 0;
+                carve(nx, ny);
+            }
+        }
+    }
+    
+    carve(1, 1);
+    
+    // Set player start and goal
+    mazeState.playerX = 1;
+    mazeState.playerY = 1;
+    mazeState.playerDir = 'east';
+    
+    // Find a goal position far from start
+    mazeState.goalX = width - 2;
+    mazeState.goalY = height - 2;
+    mazeState.grid[mazeState.goalY][mazeState.goalX] = 0;
+    
+    // Ensure path to goal
+    for (let i = mazeState.goalY; i > height - 4; i--) {
+        mazeState.grid[i][mazeState.goalX] = 0;
+    }
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function drawMaze() {
+    const cellSize = 32;
+    mazeCtx.fillStyle = '#1a1a2e';
+    mazeCtx.fillRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+    
+    // Draw maze cells
+    for (let y = 0; y < mazeState.height; y++) {
+        for (let x = 0; x < mazeState.width; x++) {
+            if (mazeState.grid[y][x] === 1) {
+                // Wall
+                mazeCtx.fillStyle = '#0f3460';
+                mazeCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                mazeCtx.strokeStyle = '#16213e';
+                mazeCtx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            } else {
+                // Path
+                mazeCtx.fillStyle = '#0a0a0a';
+                mazeCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
+    }
+    
+    // Draw goal
+    mazeCtx.fillStyle = '#ffd369';
+    mazeCtx.fillRect(
+        mazeState.goalX * cellSize + 4,
+        mazeState.goalY * cellSize + 4,
+        cellSize - 8,
+        cellSize - 8
+    );
+    mazeCtx.fillStyle = '#1a1a2e';
+    mazeCtx.font = '16px "Press Start 2P"';
+    mazeCtx.fillText('⭐', mazeState.goalX * cellSize + 6, mazeState.goalY * cellSize + 22);
+    
+    // Draw player (small snake head)
+    drawMazeSnake(mazeState.playerX * cellSize, mazeState.playerY * cellSize, cellSize);
+}
+
+function drawMazeSnake(x, y, size) {
+    // Snake head
+    mazeCtx.fillStyle = '#4ecca3';
+    mazeCtx.fillRect(x + 4, y + 4, size - 8, size - 8);
+    
+    // Eyes based on direction
+    mazeCtx.fillStyle = '#1a1a2e';
+    const eyeSize = 4;
+    switch (mazeState.playerDir) {
+        case 'north':
+            mazeCtx.fillRect(x + 8, y + 8, eyeSize, eyeSize);
+            mazeCtx.fillRect(x + size - 12, y + 8, eyeSize, eyeSize);
+            break;
+        case 'south':
+            mazeCtx.fillRect(x + 8, y + size - 12, eyeSize, eyeSize);
+            mazeCtx.fillRect(x + size - 12, y + size - 12, eyeSize, eyeSize);
+            break;
+        case 'east':
+            mazeCtx.fillRect(x + size - 12, y + 8, eyeSize, eyeSize);
+            mazeCtx.fillRect(x + size - 12, y + size - 12, eyeSize, eyeSize);
+            break;
+        case 'west':
+            mazeCtx.fillRect(x + 8, y + 8, eyeSize, eyeSize);
+            mazeCtx.fillRect(x + 8, y + size - 12, eyeSize, eyeSize);
+            break;
+    }
+}
+
+// ==================== TERMINAL INTERFACE ====================
+const terminalOutput = document.getElementById('terminal-output');
+const terminalInput = document.getElementById('terminal-input');
+
+function print(message, className = '') {
+    const line = document.createElement('pre');
+    line.innerHTML = message;
+    if (className) line.className = className;
+    terminalOutput.appendChild(line);
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+function printWelcome() {
+    print("🐍 Welcome to PyPet!", 'success');
+    print("Learn Python by caring for your virtual snake!", 'info');
+    print("Type `help()` to see available commands.", 'system');
+    print("Type `tutorial()` to start the tutorial.", 'system');
+    print("─".repeat(40), 'system');
+}
+
+// ==================== PYTHON-LIKE COMMANDS ====================
+const commands = {
+    // Basic Care Commands
+    feed: function() {
+        if (gameState.inventory.apple > 0 || gameState.inventory.mouse > 0) {
+            const food = gameState.inventory.mouse > 0 ? 'mouse' : 'apple';
+            gameState.inventory[food]--;
+            gameState.pet.hunger = Math.min(100, gameState.pet.hunger + 30);
+            gameState.pet.happiness = Math.min(100, gameState.pet.happiness + 10);
+            addXP(15);
+            print(`🍎 You fed ${gameState.pet.name} a ${food}!`, 'success');
+            print(`Hunger: ${gameState.pet.hunger}/100`, 'info');
+            updatePetDisplay();
+        } else {
+            print("❌ No food in inventory! Use shop() to buy some.", 'error');
+        }
+    },
+    
+    play: function() {
+        if (gameState.pet.energy < 20) {
+            print(`😴 ${gameState.pet.name} is too tired to play. Use sleep() first!`, 'error');
+            return;
+        }
+        gameState.pet.happiness = Math.min(100, gameState.pet.happiness + 25);
+        gameState.pet.energy = Math.max(0, gameState.pet.energy - 15);
+        gameState.pet.hunger = Math.max(0, gameState.pet.hunger - 10);
+        addXP(20);
+        print(`🎮 You played with ${gameState.pet.name}!`, 'success');
+        print(`Happiness: ${gameState.pet.happiness}/100`, 'info');
+        updatePetDisplay();
+    },
+    
+    sleep: function() {
+        gameState.pet.energy = Math.min(100, gameState.pet.energy + 40);
+        gameState.pet.hunger = Math.max(0, gameState.pet.hunger - 10);
+        addXP(10);
+        print(`😴 ${gameState.pet.name} took a nap!`, 'success');
+        print(`Energy: ${gameState.pet.energy}/100`, 'info');
+        updatePetDisplay();
+    },
+    
+    pet: function() {
+        gameState.pet.happiness = Math.min(100, gameState.pet.happiness + 15);
+        addXP(5);
+        print(`💚 You pet ${gameState.pet.name}! They look happy!`, 'success');
+        updatePetDisplay();
+    },
+    
+    status: function() {
+        print(`\n📊 ${gameState.pet.name}'s Status:`, 'info');
+        print(`   Level: ${gameState.pet.level} (${gameState.pet.xp}/${gameState.pet.xpToNextLevel} XP)`);
+        print(`   Hunger: ${gameState.pet.hunger}/100 ${getStatusEmoji(gameState.pet.hunger)}`);
+        print(`   Happiness: ${gameState.pet.happiness}/100 ${getStatusEmoji(gameState.pet.happiness)}`);
+        print(`   Energy: ${gameState.pet.energy}/100 ${getStatusEmoji(gameState.pet.energy)}`);
+        print(`   💰 Coins: ${gameState.coins}\n`);
+    },
+    
+    // Inventory Commands
+    inventory: function() {
+        print("\n🎒 Inventory:", 'info');
+        let hasItems = false;
+        for (const [item, count] of Object.entries(gameState.inventory)) {
+            if (count > 0) {
+                print(`   ${item}: ${count}`);
+                hasItems = true;
+            }
+        }
+        if (!hasItems) print("   (empty)");
+        print(`\n💰 Coins: ${gameState.coins}\n`);
+    },
+    
+    use_item: function(itemName) {
+        if (!itemName) {
+            print('❌ Usage: use_item("item_name")', 'error');
+            print('Example: use_item("apple")', 'system');
+            return;
+        }
+        
+        itemName = itemName.toLowerCase().replace(/['"]/g, '');
+        
+        if (!gameState.inventory[itemName] || gameState.inventory[itemName] <= 0) {
+            print(`❌ You don't have any ${itemName}!`, 'error');
+            return;
+        }
+        
+        gameState.inventory[itemName]--;
+        
+        switch(itemName) {
+            case 'apple':
+                gameState.pet.hunger = Math.min(100, gameState.pet.hunger + 25);
+                print(`🍎 ${gameState.pet.name} ate the apple! Yummy!`, 'success');
+                break;
+            case 'mouse':
+                gameState.pet.hunger = Math.min(100, gameState.pet.hunger + 40);
+                gameState.pet.happiness = Math.min(100, gameState.pet.happiness + 15);
+                print(`🐭 ${gameState.pet.name} caught and ate the mouse!`, 'success');
+                break;
+            case 'toy':
+                gameState.pet.happiness = Math.min(100, gameState.pet.happiness + 30);
+                gameState.inventory.toy++; // Toy doesn't get consumed
+                print(`🧸 ${gameState.pet.name} played with the toy!`, 'success');
+                break;
+            case 'bed':
+                gameState.pet.energy = Math.min(100, gameState.pet.energy + 50);
+                gameState.inventory.bed++; // Bed doesn't get consumed
+                print(`🛏️ ${gameState.pet.name} rested in the cozy bed!`, 'success');
+                break;
+            case 'golden_apple':
+                gameState.pet.hunger = 100;
+                print(`✨ ${gameState.pet.name} ate the golden apple! Fully restored!`, 'success');
+                break;
+            default:
+                print(`❌ Unknown item: ${itemName}`, 'error');
+                gameState.inventory[itemName]++; // Refund
+                return;
+        }
+        
+        addXP(10);
+        updatePetDisplay();
+    },
+    
+    shop: function() {
+        print("\n🏪 Shop:", 'info');
+        for (const [item, data] of Object.entries(gameState.shop)) {
+            print(`   ${item}: ${data.price} coins - ${data.description}`);
+        }
+        print(`\n💰 Your coins: ${gameState.coins}`);
+        print('Use buy("item_name") to purchase\n', 'system');
+    },
+    
+    buy: function(itemName) {
+        if (!itemName) {
+            print('❌ Usage: buy("item_name")', 'error');
+            return;
+        }
+        
+        itemName = itemName.toLowerCase().replace(/['"]/g, '');
+        
+        if (!gameState.shop[itemName]) {
+            print(`❌ Item "${itemName}" not found in shop!`, 'error');
+            return;
+        }
+        
+        const item = gameState.shop[itemName];
+        if (gameState.coins < item.price) {
+            print(`❌ Not enough coins! Need ${item.price}, have ${gameState.coins}`, 'error');
+            return;
+        }
+        
+        gameState.coins -= item.price;
+        gameState.inventory[itemName] = (gameState.inventory[itemName] || 0) + 1;
+        print(`✅ Bought ${itemName}! Remaining coins: ${gameState.coins}`, 'success');
+    },
+    
+    // Mini Games
+    start_maze: function() {
+        gameState.inMaze = true;
+        generateMaze();
+        document.getElementById('maze-area').classList.remove('hidden');
+        drawMaze();
+        print("\n🎮 Maze Game Started!", 'success');
+        print("Navigate your snake to the ⭐ goal!", 'info');
+        print("Commands: move('direction'), at_wall(), can_move('direction')", 'system');
+        print("turn_left(), turn_right()", 'system');
+        print("Directions: 'north', 'south', 'east', 'west'\n", 'system');
+    },
+    
+    exit_maze: function() {
+        if (!gameState.inMaze) {
+            print("❌ You're not in a maze!", 'error');
+            return;
+        }
+        gameState.inMaze = false;
+        document.getElementById('maze-area').classList.add('hidden');
+        print("👋 Left the maze game.", 'info');
+    },
+    
+    move: function(direction) {
+        if (!gameState.inMaze) {
+            print("❌ Start a maze first with start_maze()", 'error');
+            return;
+        }
+        
+        if (!direction) {
+            print('❌ Usage: move("direction")', 'error');
+            print('Directions: "north", "south", "east", "west"', 'system');
+            return;
+        }
+        
+        direction = direction.toLowerCase().replace(/['"]/g, '');
+        const deltas = {
+            'north': [0, -1],
+            'south': [0, 1],
+            'east': [1, 0],
+            'west': [-1, 0]
+        };
+        
+        if (!deltas[direction]) {
+            print(`❌ Invalid direction: ${direction}`, 'error');
+            return;
+        }
+        
+        const [dx, dy] = deltas[direction];
+        const newX = mazeState.playerX + dx;
+        const newY = mazeState.playerY + dy;
+        
+        mazeState.playerDir = direction;
+        
+        if (newX < 0 || newX >= mazeState.width || newY < 0 || newY >= mazeState.height) {
+            print("🚧 Hit the boundary!", 'error');
+            drawMaze();
+            return;
+        }
+        
+        if (mazeState.grid[newY][newX] === 1) {
+            print("🧱 Hit a wall!", 'error');
+            drawMaze();
+            return;
+        }
+        
+        mazeState.playerX = newX;
+        mazeState.playerY = newY;
+        print(`➡️ Moved ${direction}`, 'success');
+        drawMaze();
+        
+        // Check win condition
+        if (mazeState.playerX === mazeState.goalX && mazeState.playerY === mazeState.goalY) {
+            print("\n🎉 Congratulations! You reached the goal!", 'success');
+            addXP(100);
+            gameState.coins += 25;
+            print(`+100 XP, +25 coins!`, 'info');
+            print("Type start_maze() for a new maze!\n", 'system');
+            gameState.inMaze = false;
+            document.getElementById('maze-area').classList.add('hidden');
+            updatePetDisplay();
+        }
+    },
+    
+    at_wall: function() {
+        if (!gameState.inMaze) {
+            print("❌ Start a maze first with start_maze()", 'error');
+            return false;
+        }
+        
+        const deltas = {
+            'north': [0, -1],
+            'south': [0, 1],
+            'east': [1, 0],
+            'west': [-1, 0]
+        };
+        
+        const [dx, dy] = deltas[mazeState.playerDir];
+        const checkX = mazeState.playerX + dx;
+        const checkY = mazeState.playerY + dy;
+        
+        const isWall = checkX < 0 || checkX >= mazeState.width || 
+                       checkY < 0 || checkY >= mazeState.height ||
+                       mazeState.grid[checkY][checkX] === 1;
+        
+        print(`🔍 at_wall() → ${isWall}`, isWall ? 'error' : 'success');
+        return isWall;
+    },
+    
+    can_move: function(direction) {
+        if (!gameState.inMaze) {
+            print("❌ Start a maze first with start_maze()", 'error');
+            return false;
+        }
+        
+        if (!direction) {
+            print('❌ Usage: can_move("direction")', 'error');
+            return false;
+        }
+        
+        direction = direction.toLowerCase().replace(/['"]/g, '');
+        const deltas = {
+            'north': [0, -1],
+            'south': [0, 1],
+            'east': [1, 0],
+            'west': [-1, 0]
+        };
+        
+        if (!deltas[direction]) {
+            print(`❌ Invalid direction: ${direction}`, 'error');
+            return false;
+        }
+        
+        const [dx, dy] = deltas[direction];
+        const checkX = mazeState.playerX + dx;
+        const checkY = mazeState.playerY + dy;
+        
+        const canMove = checkX >= 0 && checkX < mazeState.width && 
+                        checkY >= 0 && checkY < mazeState.height &&
+                        mazeState.grid[checkY][checkX] === 0;
+        
+        print(`🔍 can_move("${direction}") → ${canMove}`, canMove ? 'success' : 'error');
+        return canMove;
+    },
+    
+    turn_left: function() {
+        if (!gameState.inMaze) {
+            print("❌ Start a maze first with start_maze()", 'error');
+            return;
+        }
+        
+        const turns = { 'north': 'west', 'west': 'south', 'south': 'east', 'east': 'north' };
+        mazeState.playerDir = turns[mazeState.playerDir];
+        print(`↩️ Turned left, now facing ${mazeState.playerDir}`, 'success');
+        drawMaze();
+    },
+    
+    turn_right: function() {
+        if (!gameState.inMaze) {
+            print("❌ Start a maze first with start_maze()", 'error');
+            return;
+        }
+        
+        const turns = { 'north': 'east', 'east': 'south', 'south': 'west', 'west': 'north' };
+        mazeState.playerDir = turns[mazeState.playerDir];
+        print(`↪️ Turned right, now facing ${mazeState.playerDir}`, 'success');
+        drawMaze();
+    },
+    
+    // Help and Tutorial
+    help: function() {
+        print("\n📚 Available Commands:", 'info');
+        print("\n🐍 Basic Care:");
+        print("   feed()          - Feed your snake");
+        print("   play()          - Play with your snake");
+        print("   sleep()         - Let your snake rest");
+        print("   pet()           - Pet your snake");
+        print("   status()        - Check snake's stats");
+        print("\n🎒 Items:");
+        print("   inventory()     - View your items");
+        print('   use_item("x")   - Use an item');
+        print("   shop()          - View shop");
+        print('   buy("x")        - Buy an item');
+        print("\n🎮 Mini Games:");
+        print("   start_maze()    - Start maze game");
+        print("   exit_maze()     - Leave maze");
+        print('   move("dir")     - Move in direction');
+        print("   at_wall()       - Check if wall ahead");
+        print('   can_move("dir") - Check if can move');
+        print("   turn_left()     - Turn left");
+        print("   turn_right()    - Turn right");
+        print("\n📖 Learning:");
+        print("   tutorial()      - Start tutorial");
+        print("   hint()          - Get a hint");
+        print("   clear()         - Clear terminal\n");
+    },
+    
+    tutorial: function() {
+        gameState.inTutorial = true;
+        gameState.tutorialStep = 0;
+        print("\n📖 Welcome to the PyPet Tutorial!", 'success');
+        print("Let's learn Python basics while caring for your snake!\n", 'info');
+        nextTutorialStep();
+    },
+    
+    hint: function() {
+        const hints = [
+            "Try feeding your snake with feed()",
+            "Check your snake's status with status()",
+            "You can buy items from the shop() and use_item()",
+            "Play the maze game with start_maze()",
+            "In the maze, use move('north') to move up",
+            "Check for walls with at_wall() before moving",
+            "Keep your snake happy by playing with them!"
+        ];
+        print(`💡 Hint: ${hints[Math.floor(Math.random() * hints.length)]}`, 'info');
+    },
+    
+    clear: function() {
+        terminalOutput.innerHTML = '';
+        print("Terminal cleared.", 'system');
+    },
+    
+    rename: function(newName) {
+        if (!newName) {
+            print('❌ Usage: rename("new_name")', 'error');
+            return;
+        }
+        newName = newName.replace(/['"]/g, '');
+        const oldName = gameState.pet.name;
+        gameState.pet.name = newName;
+        print(`✅ Renamed ${oldName} to ${newName}!`, 'success');
+        updatePetDisplay();
+    }
+};
+
+// Tutorial Steps
+const tutorialSteps = [
+    {
+        message: "First, let's check on your snake's status.\nType: status()",
+        check: (cmd) => cmd.includes('status')
+    },
+    {
+        message: "Great! Now let's feed your snake.\nType: feed()",
+        check: (cmd) => cmd.includes('feed')
+    },
+    {
+        message: "Your snake looks happier! Let's play with them.\nType: play()",
+        check: (cmd) => cmd.includes('play')
+    },
+    {
+        message: "Now check your inventory of items.\nType: inventory()",
+        check: (cmd) => cmd.includes('inventory')
+    },
+    {
+        message: "You can use items from your inventory.\nType: use_item(\"apple\")",
+        check: (cmd) => cmd.includes('use_item')
+    },
+    {
+        message: "Excellent! Now let's try the maze game!\nType: start_maze()",
+        check: (cmd) => cmd.includes('start_maze')
+    },
+    {
+        message: "In the maze, move your snake toward the star.\nType: move(\"east\") or another direction",
+        check: (cmd) => cmd.includes('move')
+    },
+    {
+        message: "🎉 Tutorial complete! You've learned the basics!\nExplore more commands with help()",
+        check: () => true
+    }
+];
+
+function nextTutorialStep() {
+    if (gameState.tutorialStep < tutorialSteps.length) {
+        const step = tutorialSteps[gameState.tutorialStep];
+        print(`\n📝 Step ${gameState.tutorialStep + 1}: ${step.message}`, 'info');
+    } else {
+        gameState.inTutorial = false;
+        addXP(50);
+        print("\n🎓 Tutorial Completed! +50 XP", 'success');
+    }
+}
+
+// ==================== HELPER FUNCTIONS ====================
+function getStatusEmoji(value) {
+    if (value >= 70) return '😊';
+    if (value >= 40) return '😐';
+    return '😟';
+}
+
+function addXP(amount) {
+    gameState.pet.xp += amount;
+    while (gameState.pet.xp >= gameState.pet.xpToNextLevel) {
+        gameState.pet.xp -= gameState.pet.xpToNextLevel;
+        gameState.pet.level++;
+        gameState.pet.xpToNextLevel = Math.floor(gameState.pet.xpToNextLevel * 1.5);
+        gameState.coins += 20;
+        print(`\n🎉 LEVEL UP! Now level ${gameState.pet.level}! +20 coins`, 'success');
+    }
+}
+
+// ==================== COMMAND PARSER ====================
+function parseCommand(input) {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    
+    // Add to history
+    gameState.commandHistory.unshift(trimmed);
+    if (gameState.commandHistory.length > 50) gameState.commandHistory.pop();
+    gameState.historyIndex = -1;
+    
+    // Echo command
+    print(`>>> ${trimmed}`);
+    
+    // Parse function call
+    const match = trimmed.match(/^(\w+)\s*\(\s*([^)]*)\s*\)$/);
+    
+    if (!match) {
+        // Check for simple variable access or expressions
+        if (trimmed === 'True' || trimmed === 'False') {
+            print(trimmed, 'success');
+            return;
+        }
+        print(`❌ SyntaxError: Invalid syntax`, 'error');
+        print(`Tip: Use function syntax like feed() or use_item("apple")`, 'system');
+        return;
+    }
+    
+    const [, funcName, args] = match;
+    
+    if (!commands[funcName]) {
+        print(`❌ NameError: '${funcName}' is not defined`, 'error');
+        print(`Type help() to see available commands`, 'system');
+        return;
+    }
+    
+    // Parse argument
+    let parsedArg = null;
+    if (args) {
+        parsedArg = args.trim().replace(/^["']|["']$/g, '');
+    }
+    
+    // Execute command
+    try {
+        commands[funcName](parsedArg);
+        
+        // Check tutorial progress
+        if (gameState.inTutorial) {
+            const step = tutorialSteps[gameState.tutorialStep];
+            if (step && step.check(trimmed)) {
+                gameState.tutorialStep++;
+                setTimeout(nextTutorialStep, 500);
+            }
+        }
+    } catch (e) {
+        print(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// ==================== GAME LOOP ====================
+function gameLoop() {
+    animationFrame++;
+    updatePetDisplay();
+    
+    // Gradual stat decrease
+    if (animationFrame % 300 === 0) { // Every ~5 seconds at 60fps
+        gameState.pet.hunger = Math.max(0, gameState.pet.hunger - 1);
+        gameState.pet.happiness = Math.max(0, gameState.pet.happiness - 0.5);
+        gameState.pet.energy = Math.max(0, gameState.pet.energy - 0.5);
+    }
+    
+    requestAnimationFrame(gameLoop);
+}
+
+// ==================== EVENT HANDLERS ====================
+function setupEventHandlers() {
+    terminalInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            parseCommand(terminalInput.value);
+            terminalInput.value = '';
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (gameState.historyIndex < gameState.commandHistory.length - 1) {
+                gameState.historyIndex++;
+                terminalInput.value = gameState.commandHistory[gameState.historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (gameState.historyIndex > 0) {
+                gameState.historyIndex--;
+                terminalInput.value = gameState.commandHistory[gameState.historyIndex];
+            } else {
+                gameState.historyIndex = -1;
+                terminalInput.value = '';
+            }
+        }
+    });
+    
+    // Focus terminal on click
+    document.getElementById('terminal').addEventListener('click', () => {
+        terminalInput.focus();
+    });
+}
+
+// ==================== PWA INSTALLATION ====================
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-btn').classList.remove('hidden');
+});
+
+document.getElementById('install-btn')?.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            print('🎉 App installed!', 'success');
+        }
+        deferredPrompt = null;
+    }
+});
+
+// ==================== SERVICE WORKER REGISTRATION ====================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker registered'))
+            .catch(err => console.log('Service Worker registration failed:', err));
+    });
+}
+
+// ==================== INITIALIZE ====================
+document.addEventListener('DOMContentLoaded', () => {
+    initCanvas();
+    setupEventHandlers();
+    printWelcome();
+    updatePetDisplay();
+    gameLoop();
+    
+    // Auto-focus terminal
+    terminalInput.focus();
+});
+
+// Save game state to localStorage
+window.addEventListener('beforeunload', () => {
+    localStorage.setItem('pypet_save', JSON.stringify(gameState));
+});
+
+// Load saved game
+const savedGame = localStorage.getItem('pypet_save');
+if (savedGame) {
+    try {
+        const saved = JSON.parse(savedGame);
+        Object.assign(gameState, saved);
+        gameState.inMaze = false; // Reset maze state on reload
+    } catch (e) {
+        console.log('Could not load save');
+    }
+}

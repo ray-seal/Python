@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn Python by caring for your 8-bit snake pet!">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>PyPet - Learn Python with Snake!</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🐍 PyPet</h1>
+            <p class="subtitle">Learn Python by caring for your snake!</p>
+        </header>
+
+        <main>
+            <div id="game-container">
+                <!-- Pet Display Area -->
+                <div id="pet-area">
+                    <canvas id="pet-canvas" width="200" height="200"></canvas>
+                    <div id="pet-info">
+                        <div class="stat">
+                            <span class="stat-label">Hunger:</span>
+                            <div class="stat-bar"><div id="hunger-bar" class="stat-fill"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Happiness:</span>
+                            <div class="stat-bar"><div id="happiness-bar" class="stat-fill"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Energy:</span>
+                            <div class="stat-bar"><div id="energy-bar" class="stat-fill"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Level:</span>
+                            <span id="level-display">1</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">XP:</span>
+                            <div class="stat-bar"><div id="xp-bar" class="stat-fill xp"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maze Game Area (hidden by default) -->
+                <div id="maze-area" class="hidden">
+                    <canvas id="maze-canvas" width="320" height="320"></canvas>
+                    <div id="maze-info">
+                        <p>Navigate your snake through the maze!</p>
+                        <p>Commands: <code>move("north")</code>, <code>move("south")</code>, <code>move("east")</code>, <code>move("west")</code></p>
+                        <p>Check walls: <code>at_wall()</code>, <code>can_move("direction")</code></p>
+                        <p>Turn: <code>turn_left()</code>, <code>turn_right()</code></p>
+                    </div>
+                </div>
+
+                <!-- Terminal Area -->
+                <div id="terminal">
+                    <div id="terminal-header">
+                        <span class="terminal-title">Python Terminal</span>
+                        <span class="terminal-buttons">
+                            <span class="btn-minimize"></span>
+                            <span class="btn-maximize"></span>
+                            <span class="btn-close"></span>
+                        </span>
+                    </div>
+                    <div id="terminal-output"></div>
+                    <div id="terminal-input-line">
+                        <span class="prompt">&gt;&gt;&gt;</span>
+                        <input type="text" id="terminal-input" placeholder="Type Python commands here..." autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+
+                <!-- Help Panel -->
+                <div id="help-panel">
+                    <h3>📚 Available Commands</h3>
+                    <div id="commands-list">
+                        <div class="command-category">
+                            <h4>🍎 Basic Care</h4>
+                            <code>feed()</code> - Feed your snake<br>
+                            <code>play()</code> - Play with your snake<br>
+                            <code>sleep()</code> - Let your snake rest<br>
+                            <code>pet()</code> - Pet your snake<br>
+                            <code>status()</code> - Check snake's stats
+                        </div>
+                        <div class="command-category">
+                            <h4>🎒 Items</h4>
+                            <code>inventory()</code> - View items<br>
+                            <code>use_item("item_name")</code> - Use an item<br>
+                            <code>shop()</code> - View shop
+                        </div>
+                        <div class="command-category">
+                            <h4>🎮 Mini Games</h4>
+                            <code>start_maze()</code> - Play maze game<br>
+                            <code>exit_maze()</code> - Leave maze
+                        </div>
+                        <div class="command-category">
+                            <h4>📖 Learning</h4>
+                            <code>help()</code> - Show all commands<br>
+                            <code>tutorial()</code> - Start tutorial<br>
+                            <code>hint()</code> - Get a hint
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Made with 💚 to teach Python | <a href="#" id="install-btn" class="hidden">Install App</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
