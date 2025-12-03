@@ -106,7 +106,103 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Settings Panel -->
+                <div id="settings-panel" class="hidden">
+                    <h3>⚙️ Settings</h3>
+                    <div id="settings-content">
+                        <div class="setting-group">
+                            <h4>🐍 Snake Appearance</h4>
+                            <div class="setting-row">
+                                <label for="snake-color">Body Color:</label>
+                                <input type="color" id="snake-color" value="#4ecca3">
+                            </div>
+                            <div class="setting-row">
+                                <label for="snake-light-color">Light Color:</label>
+                                <input type="color" id="snake-light-color" value="#a8e6cf">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>🎨 Background</h4>
+                            <div class="setting-row">
+                                <label for="bg-color">Pet Area:</label>
+                                <input type="color" id="bg-color" value="#0f3460">
+                            </div>
+                            <div class="setting-row">
+                                <label for="terminal-bg-color">Terminal:</label>
+                                <input type="color" id="terminal-bg-color" value="#0a0a0a">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>🎮 Gameplay</h4>
+                            <div class="setting-row">
+                                <label for="exec-delay">Script Speed:</label>
+                                <select id="exec-delay">
+                                    <option value="50">Fast</option>
+                                    <option value="200" selected>Normal</option>
+                                    <option value="500">Slow</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <label for="auto-save">Auto-save:</label>
+                                <input type="checkbox" id="auto-save" checked>
+                            </div>
+                        </div>
+                        <div class="setting-actions">
+                            <button id="reset-settings-btn" class="btn-secondary">Reset to Default</button>
+                            <button id="close-settings-btn" class="btn-primary">Close</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CSS Editor Panel -->
+                <div id="css-editor-panel" class="hidden">
+                    <h3>🎨 CSS Style Editor</h3>
+                    <p class="css-editor-intro">Learn CSS by styling your snake! Edit the code below and click "Apply CSS".</p>
+                    
+                    <div class="css-examples-bar">
+                        <span>Try an example:</span>
+                        <select id="css-example-select">
+                            <option value="">-- Select --</option>
+                            <option value="rainbow">🌈 Rainbow</option>
+                            <option value="ocean">🌊 Ocean</option>
+                            <option value="sunset">🌅 Sunset</option>
+                            <option value="neon">💜 Neon</option>
+                            <option value="dance">🕺 Dance</option>
+                            <option value="bounce">⬆️ Bounce</option>
+                            <option value="spin">🔄 Spin</option>
+                            <option value="pulse">💗 Pulse</option>
+                            <option value="shake">📳 Shake</option>
+                            <option value="glow">✨ Glow</option>
+                        </select>
+                    </div>
+                    
+                    <textarea id="css-editor" spellcheck="false" placeholder="/* Write your CSS here */"></textarea>
+                    
+                    <div id="css-output" class="css-output"></div>
+                    
+                    <div class="css-editor-actions">
+                        <button id="apply-css-btn" class="btn-primary">▶ Apply CSS</button>
+                        <button id="reset-css-btn" class="btn-secondary">Reset</button>
+                        <button id="close-css-btn" class="btn-secondary">Close</button>
+                    </div>
+                    
+                    <div class="css-tips">
+                        <h4>💡 CSS Tips:</h4>
+                        <ul>
+                            <li><code>.snake-body { fill: #color; }</code> - Change snake color</li>
+                            <li><code>animation: name 1s infinite;</code> - Add animation</li>
+                            <li><code>box-shadow: 0 0 10px #color;</code> - Add glow</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
+
+            <!-- Settings Toggle Button -->
+            <button id="settings-toggle-btn" class="settings-toggle" title="Settings">⚙️</button>
+            
+            <!-- CSS Editor Toggle Button -->
+            <button id="css-toggle-btn" class="css-toggle" title="CSS Editor">🎨</button>
         </main>
 
         <footer>
@@ -114,6 +210,12 @@
         </footer>
     </div>
 
+    <!-- Load modules in correct order -->
+    <script src="src/terminal/scriptParser.js"></script>
+    <script src="src/games/miniGamesManager.js"></script>
+    <script src="src/storage/saveManager.js"></script>
+    <script src="src/terminal/terminalIntegration.js"></script>
+    <script src="src/styles/cssEditor.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>
 </body>
