@@ -73,7 +73,6 @@ class Lexer {
 
     measureIndent() {
         let indent = 0;
-        const startPos = this.pos;
         while (this.peek() === ' ' || this.peek() === '\t') {
             if (this.peek() === ' ') {
                 indent++;
@@ -611,6 +610,12 @@ class Executor {
         }
     }
 
+    /**
+     * Synchronously execute a function call and return its result.
+     * Used for evaluating conditions in if statements.
+     * Note: This method assumes commands are synchronous. Async commands
+     * will return a Promise object instead of the actual result.
+     */
     executeCallSync(node) {
         const { name, arguments: args } = node;
         if (!this.commands[name]) {

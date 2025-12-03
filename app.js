@@ -982,7 +982,7 @@ function setupEventHandlers() {
                 multiLineBuffer = '';
                 terminalInput.value = '';
                 terminalInput.placeholder = 'Type Python commands here...';
-                // Clear the echoed lines and re-parse
+                // Execute the complete multi-line script
                 parseCommand(script);
             } else {
                 parseCommand(terminalInput.value);
