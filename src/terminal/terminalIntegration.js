@@ -8,6 +8,9 @@
 // - Settings management integration
 // - Event coordination
 
+(function() {
+'use strict';
+
 /**
  * TerminalIntegration - Facade for integrating all modules
  */
@@ -389,3 +392,5 @@ if (typeof module !== 'undefined' && module.exports) {
         createTerminalIntegration
     };
 }
+
+})(); // End of IIFE

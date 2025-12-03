@@ -118,6 +118,47 @@ Click the ⚙️ button to access settings:
 - **Background**: Change pet area and terminal background colors
 - **Gameplay**: Adjust script execution speed and auto-save settings
 
+## 🎨 CSS Editor - Learn CSS!
+
+Click the 🎨 button to open the CSS Style Editor and learn CSS by styling your snake!
+
+### Features:
+- **Live CSS editing** - Write CSS and see changes instantly
+- **Pre-built examples** - 10+ themes including Rainbow, Neon, Ocean, Sunset
+- **Animations** - Make your snake dance, bounce, spin, pulse, shake, or glow!
+- **Real-time feedback** - See CSS errors and successes immediately
+
+### Example CSS:
+```css
+/* Change snake colors */
+.snake-body {
+    fill: #ff6b6b;
+}
+
+.snake-light {
+    fill: #ffd93d;
+}
+
+/* Add a glow effect */
+#pet-canvas {
+    box-shadow: 0 0 20px #ff6b6b;
+}
+
+/* Make the snake dance! */
+#pet-canvas {
+    animation: dance 0.5s ease infinite;
+}
+```
+
+### Available Animations:
+- `dance` - Snake does a little dance
+- `bounce` - Snake bounces up and down
+- `spin` - Snake spins around
+- `pulse` - Snake pulses like a heartbeat
+- `shake` - Snake shakes with excitement
+- `glow` - Snake glows with a pulsing light
+- `wave` - Gentle wave motion
+
 ## 🛠️ PWA Features
 
 - **Offline Support**: Play without internet connection
@@ -143,8 +184,10 @@ Python/
 │   │   └── terminalIntegration.js # Integration helper
 │   ├── games/
 │   │   └── miniGamesManager.js   # Mini-games and rewards manager
-│   └── storage/
-│       └── saveManager.js        # Persistent save/load manager
+│   ├── storage/
+│   │   └── saveManager.js        # Persistent save/load manager
+│   └── styles/
+│       └── cssEditor.js          # CSS editor for learning CSS
 └── README.md               # Documentation
 ```
 

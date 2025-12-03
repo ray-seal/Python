@@ -7,6 +7,9 @@
 // - Game state tracking
 // - Leaderboard/statistics
 
+(function() {
+'use strict';
+
 /**
  * MiniGamesManager - Central manager for all mini-games
  */
@@ -278,3 +281,5 @@ if (typeof module !== 'undefined' && module.exports) {
         createMiniGamesManager
     };
 }
+
+})(); // End of IIFE

@@ -9,6 +9,9 @@
 // - Sequences separated by commas/newlines
 // - Multi-line indentation blocks with repeat(N): and if
 
+(function() {
+'use strict';
+
 /**
  * Token types for the lexer
  */
@@ -939,3 +942,5 @@ if (typeof module !== 'undefined' && module.exports) {
         NodeType
     };
 }
+
+})(); // End of IIFE

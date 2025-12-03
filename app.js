@@ -1093,6 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initScriptExecutor();
     initTerminalIntegration();
     initSettingsUI();
+    initCSSEditor();
     printWelcome();
     updatePetDisplay();
     gameLoop();
@@ -1140,6 +1141,7 @@ function initTerminalIntegration() {
 function initSettingsUI() {
     const settingsToggle = document.getElementById('settings-toggle-btn');
     const settingsPanel = document.getElementById('settings-panel');
+    const cssEditorPanel = document.getElementById('css-editor-panel');
     const closeSettingsBtn = document.getElementById('close-settings-btn');
     const resetSettingsBtn = document.getElementById('reset-settings-btn');
     
@@ -1155,6 +1157,10 @@ function initSettingsUI() {
     if (settingsToggle) {
         settingsToggle.addEventListener('click', () => {
             settingsPanel.classList.toggle('hidden');
+            // Hide CSS editor when opening settings
+            if (!settingsPanel.classList.contains('hidden') && cssEditorPanel) {
+                cssEditorPanel.classList.add('hidden');
+            }
         });
     }
     
@@ -1284,6 +1290,107 @@ function handleSettingsChange(key, value, settings) {
             if (term) term.style.backgroundColor = '#0a0a0a';
             updatePetDisplay();
             break;
+    }
+}
+
+// ==================== CSS EDITOR INTEGRATION ====================
+let cssEditor = null;
+
+// Global functions for CSS editor to update colors
+window.updateSnakeColor = function(type, color) {
+    if (type === 'body') {
+        colors['▓'] = color;
+    } else if (type === 'light') {
+        colors['░'] = color;
+    }
+    updatePetDisplay();
+};
+
+window.updateBackgroundColor = function(color) {
+    backgroundColor = color;
+    updatePetDisplay();
+};
+
+function initCSSEditor() {
+    if (typeof window.createCSSEditor !== 'function') return;
+    
+    cssEditor = window.createCSSEditor({
+        onApply: (css) => {
+            print('🎨 CSS styles applied!', 'success');
+        },
+        onError: (error) => {
+            print(`❌ CSS Error: ${error.message}`, 'error');
+        }
+    });
+    
+    cssEditor.initialize('css-editor', 'pet-canvas');
+    
+    // CSS Editor toggle button
+    const cssToggleBtn = document.getElementById('css-toggle-btn');
+    const cssEditorPanel = document.getElementById('css-editor-panel');
+    const settingsPanel = document.getElementById('settings-panel');
+    
+    if (cssToggleBtn) {
+        cssToggleBtn.addEventListener('click', () => {
+            cssEditorPanel.classList.toggle('hidden');
+            // Hide settings when opening CSS editor
+            if (!cssEditorPanel.classList.contains('hidden')) {
+                settingsPanel.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Apply CSS button
+    const applyCSSBtn = document.getElementById('apply-css-btn');
+    const cssOutput = document.getElementById('css-output');
+    
+    if (applyCSSBtn) {
+        applyCSSBtn.addEventListener('click', () => {
+            const result = cssEditor.applyCSS();
+            if (cssOutput) {
+                cssOutput.textContent = result.message;
+                cssOutput.className = 'css-output ' + (result.success ? 'success' : 'error');
+            }
+        });
+    }
+    
+    // Reset CSS button
+    const resetCSSBtn = document.getElementById('reset-css-btn');
+    if (resetCSSBtn) {
+        resetCSSBtn.addEventListener('click', () => {
+            cssEditor.reset();
+            if (cssOutput) {
+                cssOutput.textContent = '✅ CSS reset to default';
+                cssOutput.className = 'css-output success';
+            }
+        });
+    }
+    
+    // Close CSS button
+    const closeCSSBtn = document.getElementById('close-css-btn');
+    if (closeCSSBtn) {
+        closeCSSBtn.addEventListener('click', () => {
+            cssEditorPanel.classList.add('hidden');
+        });
+    }
+    
+    // Example selector
+    const exampleSelect = document.getElementById('css-example-select');
+    if (exampleSelect) {
+        exampleSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                const result = cssEditor.loadExample(e.target.value);
+                if (cssOutput) {
+                    cssOutput.textContent = result.success ? `✅ Loaded: ${result.message}` : result.message;
+                    cssOutput.className = 'css-output ' + (result.success ? 'success' : 'error');
+                }
+                // Auto-apply when loading an example
+                if (result.success) {
+                    setTimeout(() => cssEditor.applyCSS(), 100);
+                }
+                e.target.value = ''; // Reset selector
+            }
+        });
     }
 }
 

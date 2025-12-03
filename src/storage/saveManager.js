@@ -7,6 +7,9 @@
 // - Data versioning and migration
 // - Export/import capabilities
 
+(function() {
+'use strict';
+
 /**
  * SaveManager - Handles persistent storage for game progress
  */
@@ -322,3 +325,5 @@ if (typeof module !== 'undefined' && module.exports) {
         createSaveManager
     };
 }
+
+})(); // End of IIFE
