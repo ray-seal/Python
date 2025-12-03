@@ -67,11 +67,23 @@ buy("mouse")        # Buy an item
 ```python
 start_maze()        # Start maze game
 move("north")       # Move in a direction (north/south/east/west)
+move("east", 3)     # Move 3 steps east
 at_wall()           # Check if wall ahead
 can_move("east")    # Check if can move in direction
 turn_left()         # Turn left
 turn_right()        # Turn right
 exit_maze()         # Leave maze game
+```
+
+### Multi-line Scripts (Press Shift+Enter for new lines)
+```python
+# Repeat a block of commands
+repeat(3):
+    move("east")
+
+# Conditional execution
+if can_move("south"):
+    move("south")
 ```
 
 ### Learning
