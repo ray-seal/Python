@@ -106,7 +106,58 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Settings Panel -->
+                <div id="settings-panel" class="hidden">
+                    <h3>⚙️ Settings</h3>
+                    <div id="settings-content">
+                        <div class="setting-group">
+                            <h4>🐍 Snake Appearance</h4>
+                            <div class="setting-row">
+                                <label for="snake-color">Body Color:</label>
+                                <input type="color" id="snake-color" value="#4ecca3">
+                            </div>
+                            <div class="setting-row">
+                                <label for="snake-light-color">Light Color:</label>
+                                <input type="color" id="snake-light-color" value="#a8e6cf">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>🎨 Background</h4>
+                            <div class="setting-row">
+                                <label for="bg-color">Pet Area:</label>
+                                <input type="color" id="bg-color" value="#0f3460">
+                            </div>
+                            <div class="setting-row">
+                                <label for="terminal-bg-color">Terminal:</label>
+                                <input type="color" id="terminal-bg-color" value="#0a0a0a">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>🎮 Gameplay</h4>
+                            <div class="setting-row">
+                                <label for="exec-delay">Script Speed:</label>
+                                <select id="exec-delay">
+                                    <option value="50">Fast</option>
+                                    <option value="200" selected>Normal</option>
+                                    <option value="500">Slow</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <label for="auto-save">Auto-save:</label>
+                                <input type="checkbox" id="auto-save" checked>
+                            </div>
+                        </div>
+                        <div class="setting-actions">
+                            <button id="reset-settings-btn" class="btn-secondary">Reset to Default</button>
+                            <button id="close-settings-btn" class="btn-primary">Close</button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Settings Toggle Button -->
+            <button id="settings-toggle-btn" class="settings-toggle" title="Settings">⚙️</button>
         </main>
 
         <footer>
@@ -114,6 +165,11 @@
         </footer>
     </div>
 
+    <!-- Load modules in correct order -->
+    <script src="src/terminal/scriptParser.js"></script>
+    <script src="src/games/miniGamesManager.js"></script>
+    <script src="src/storage/saveManager.js"></script>
+    <script src="src/terminal/terminalIntegration.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>
 </body>

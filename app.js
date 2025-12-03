@@ -1,6 +1,9 @@
 // PyPet - Learn Python with your 8-bit Snake!
 // Main Application Logic
 
+// ==================== TERMINAL INTEGRATION ====================
+let terminalIntegration = null;
+
 // ==================== GAME STATE ====================
 const gameState = {
     pet: {
@@ -122,8 +125,8 @@ const snakeSprites = {
     ]
 };
 
-// Color palette for 8-bit graphics
-const colors = {
+// Color palette for 8-bit graphics (mutable for settings)
+let colors = {
     '▓': '#4ecca3', // Snake body green
     '░': '#a8e6cf', // Snake lighter green
     '█': '#1a1a2e', // Eyes dark
@@ -133,6 +136,9 @@ const colors = {
     'z': '#ffd369',
     'Z': '#ffd369'
 };
+
+// Background color (mutable for settings)
+let backgroundColor = '#0f3460';
 
 // ==================== CANVAS RENDERING ====================
 let petCanvas, petCtx, mazeCanvas, mazeCtx;
@@ -155,8 +161,8 @@ function drawSnake(state = 'idle') {
     const offsetX = 20;
     const offsetY = 10;
     
-    // Clear canvas
-    petCtx.fillStyle = '#0f3460';
+    // Clear canvas with customizable background color
+    petCtx.fillStyle = backgroundColor;
     petCtx.fillRect(0, 0, petCanvas.width, petCanvas.height);
     
     // Add slight bounce animation
@@ -507,6 +513,12 @@ const commands = {
         generateMaze();
         document.getElementById('maze-area').classList.remove('hidden');
         drawMaze();
+        
+        // Start game through mini-games manager
+        if (terminalIntegration) {
+            terminalIntegration.startGame('maze');
+        }
+        
         print("\n🎮 Maze Game Started!", 'success');
         print("Navigate your snake to the ⭐ goal!", 'info');
         print("Commands: move('direction'), at_wall(), can_move('direction')", 'system');
@@ -519,6 +531,12 @@ const commands = {
             print("❌ You're not in a maze!", 'error');
             return;
         }
+        
+        // End game through mini-games manager (abandoned)
+        if (terminalIntegration) {
+            terminalIntegration.endGame('maze', { won: false, abandoned: true });
+        }
+        
         gameState.inMaze = false;
         document.getElementById('maze-area').classList.add('hidden');
         print("👋 Left the maze game.", 'info');
@@ -574,6 +592,11 @@ const commands = {
             mazeState.playerX = newX;
             mazeState.playerY = newY;
             
+            // Track moves through mini-games manager
+            if (terminalIntegration) {
+                terminalIntegration.recordMove('maze');
+            }
+            
             if (steps > 1) {
                 print(`➡️ Moved ${direction} (${step + 1}/${steps})`, 'success');
             } else {
@@ -584,9 +607,23 @@ const commands = {
             // Check win condition
             if (mazeState.playerX === mazeState.goalX && mazeState.playerY === mazeState.goalY) {
                 print("\n🎉 Congratulations! You reached the goal!", 'success');
-                addXP(100);
-                gameState.coins += 25;
-                print(`+100 XP, +25 coins!`, 'info');
+                
+                // End game through mini-games manager and get rewards
+                if (terminalIntegration) {
+                    const result = terminalIntegration.endGame('maze', { won: true, score: 100 });
+                    if (result) {
+                        print(`+${result.xp} XP, +${result.coins} coins!`, 'info');
+                        if (result.isHighScore) {
+                            print(`🏆 New high score!`, 'success');
+                        }
+                    }
+                } else {
+                    // Fallback if integration not available
+                    addXP(100);
+                    gameState.coins += 25;
+                    print(`+100 XP, +25 coins!`, 'info');
+                }
+                
                 print("Type start_maze() for a new maze!\n", 'system');
                 gameState.inMaze = false;
                 document.getElementById('maze-area').classList.add('hidden');
@@ -1054,6 +1091,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initCanvas();
     setupEventHandlers();
     initScriptExecutor();
+    initTerminalIntegration();
+    initSettingsUI();
     printWelcome();
     updatePetDisplay();
     gameLoop();
@@ -1062,19 +1101,211 @@ document.addEventListener('DOMContentLoaded', () => {
     terminalInput.focus();
 });
 
-// Save game state to localStorage
+// ==================== TERMINAL INTEGRATION INIT ====================
+function initTerminalIntegration() {
+    if (typeof window.createTerminalIntegration === 'function') {
+        terminalIntegration = window.createTerminalIntegration({
+            commands: commands,
+            print: print,
+            gameState: gameState,
+            onSettingsChange: handleSettingsChange,
+            onCoinsEarned: (coins, info) => {
+                gameState.coins += coins;
+                print(`+${coins} coins earned!`, 'success');
+                updatePetDisplay();
+            },
+            onXPEarned: (xp, info) => {
+                addXP(xp);
+            }
+        });
+        
+        terminalIntegration.initialize();
+        
+        // Load saved data through integration
+        const savedData = terminalIntegration.load();
+        if (savedData && savedData.state) {
+            Object.assign(gameState, savedData.state);
+            gameState.inMaze = false; // Reset maze state on reload
+        }
+        
+        // Start auto-save
+        terminalIntegration.startAutoSave(() => ({
+            gameState: gameState,
+            gameStats: terminalIntegration.getGameStats()
+        }));
+    }
+}
+
+// ==================== SETTINGS UI ====================
+function initSettingsUI() {
+    const settingsToggle = document.getElementById('settings-toggle-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    const resetSettingsBtn = document.getElementById('reset-settings-btn');
+    
+    // Settings inputs
+    const snakeColorInput = document.getElementById('snake-color');
+    const snakeLightColorInput = document.getElementById('snake-light-color');
+    const bgColorInput = document.getElementById('bg-color');
+    const terminalBgInput = document.getElementById('terminal-bg-color');
+    const execDelaySelect = document.getElementById('exec-delay');
+    const autoSaveCheckbox = document.getElementById('auto-save');
+    
+    // Toggle settings panel
+    if (settingsToggle) {
+        settingsToggle.addEventListener('click', () => {
+            settingsPanel.classList.toggle('hidden');
+        });
+    }
+    
+    // Close settings
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+        });
+    }
+    
+    // Reset settings
+    if (resetSettingsBtn) {
+        resetSettingsBtn.addEventListener('click', () => {
+            if (terminalIntegration) {
+                terminalIntegration.resetSettings();
+            }
+            // Reset inputs to defaults
+            if (snakeColorInput) snakeColorInput.value = '#4ecca3';
+            if (snakeLightColorInput) snakeLightColorInput.value = '#a8e6cf';
+            if (bgColorInput) bgColorInput.value = '#0f3460';
+            if (terminalBgInput) terminalBgInput.value = '#0a0a0a';
+            if (execDelaySelect) execDelaySelect.value = '200';
+            if (autoSaveCheckbox) autoSaveCheckbox.checked = true;
+            
+            print('Settings reset to defaults.', 'system');
+        });
+    }
+    
+    // Load current settings into inputs
+    if (terminalIntegration) {
+        const settings = terminalIntegration.getSettings();
+        if (snakeColorInput) snakeColorInput.value = settings.snakeColor;
+        if (snakeLightColorInput) snakeLightColorInput.value = settings.snakeLightColor;
+        if (bgColorInput) bgColorInput.value = settings.backgroundColor;
+        if (terminalBgInput) terminalBgInput.value = settings.terminalBg;
+        if (execDelaySelect) execDelaySelect.value = String(settings.executionDelay);
+        if (autoSaveCheckbox) autoSaveCheckbox.checked = settings.autoSave;
+    }
+    
+    // Event listeners for settings changes
+    if (snakeColorInput) {
+        snakeColorInput.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('snakeColor', e.target.value);
+            }
+        });
+    }
+    
+    if (snakeLightColorInput) {
+        snakeLightColorInput.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('snakeLightColor', e.target.value);
+            }
+        });
+    }
+    
+    if (bgColorInput) {
+        bgColorInput.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('backgroundColor', e.target.value);
+            }
+        });
+    }
+    
+    if (terminalBgInput) {
+        terminalBgInput.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('terminalBg', e.target.value);
+            }
+        });
+    }
+    
+    if (execDelaySelect) {
+        execDelaySelect.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('executionDelay', parseInt(e.target.value, 10));
+            }
+        });
+    }
+    
+    if (autoSaveCheckbox) {
+        autoSaveCheckbox.addEventListener('change', (e) => {
+            if (terminalIntegration) {
+                terminalIntegration.setSetting('autoSave', e.target.checked);
+                if (e.target.checked) {
+                    terminalIntegration.startAutoSave(() => ({
+                        gameState: gameState,
+                        gameStats: terminalIntegration.getGameStats()
+                    }));
+                } else {
+                    terminalIntegration.stopAutoSave();
+                }
+            }
+        });
+    }
+}
+
+// Handle settings changes
+function handleSettingsChange(key, value, settings) {
+    switch (key) {
+        case 'snakeColor':
+            colors['▓'] = value;
+            updatePetDisplay();
+            break;
+        case 'snakeLightColor':
+            colors['░'] = value;
+            updatePetDisplay();
+            break;
+        case 'backgroundColor':
+            backgroundColor = value;
+            updatePetDisplay();
+            break;
+        case 'terminalBg':
+            const terminalOutput = document.getElementById('terminal-output');
+            const terminal = document.getElementById('terminal');
+            if (terminalOutput) terminalOutput.style.backgroundColor = value;
+            if (terminal) terminal.style.backgroundColor = value;
+            break;
+        case 'reset':
+            // Reset all visual settings
+            colors['▓'] = '#4ecca3';
+            colors['░'] = '#a8e6cf';
+            backgroundColor = '#0f3460';
+            const termOut = document.getElementById('terminal-output');
+            const term = document.getElementById('terminal');
+            if (termOut) termOut.style.backgroundColor = '#0a0a0a';
+            if (term) term.style.backgroundColor = '#0a0a0a';
+            updatePetDisplay();
+            break;
+    }
+}
+
+// Save game state to localStorage (through integration or fallback)
 window.addEventListener('beforeunload', () => {
-    localStorage.setItem('pypet_save', JSON.stringify(gameState));
+    if (terminalIntegration) {
+        terminalIntegration.save(gameState, terminalIntegration.getGameStats());
+    } else {
+        localStorage.setItem('pypet_save', JSON.stringify(gameState));
+    }
 });
 
-// Load saved game
-const savedGame = localStorage.getItem('pypet_save');
-if (savedGame) {
-    try {
-        const saved = JSON.parse(savedGame);
-        Object.assign(gameState, saved);
-        gameState.inMaze = false; // Reset maze state on reload
-    } catch (e) {
-        console.log('Could not load save');
+// Load saved game (fallback if integration not available)
+if (!terminalIntegration) {
+    const savedGame = localStorage.getItem('pypet_save');
+    if (savedGame) {
+        try {
+            const saved = JSON.parse(savedGame);
+            Object.assign(gameState, saved);
+            gameState.inMaze = false; // Reset maze state on reload
+        } catch (e) {
+            console.log('Could not load save');
+        }
     }
 }
