@@ -237,6 +237,10 @@ class Lexer {
             if (this.peek() === '\\') {
                 this.advance();
                 const escaped = this.peek();
+                // Handle null/empty escaped character
+                if (!escaped || escaped === '') {
+                    break;
+                }
                 if (escaped === 'n') value += '\n';
                 else if (escaped === 't') value += '\t';
                 else if (escaped === '\\') value += '\\';

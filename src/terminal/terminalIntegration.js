@@ -125,7 +125,7 @@ class TerminalIntegration {
      */
     async executeScript(source) {
         if (!window.ScriptParser) {
-            throw new Error('ScriptParser not loaded');
+            throw new Error('ScriptParser module not loaded. Please ensure src/terminal/scriptParser.js is included before app.js');
         }
         
         // Re-create executor if needed (to pick up command changes)
