@@ -1,10 +1,11 @@
 // Service Worker for PyPet PWA
-const CACHE_NAME = 'pypet-v1';
+const CACHE_NAME = 'pypet-v2';
 const urlsToCache = [
     '/',
     '/index.html',
     '/styles.css',
     '/app.js',
+    '/parser.js',
     '/manifest.json',
     '/icons/icon-72.png',
     '/icons/icon-96.png',

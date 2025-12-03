@@ -524,19 +524,19 @@ const commands = {
         print("👋 Left the maze game.", 'info');
     },
     
-    move: function(direction) {
+    move: function(direction, count) {
         if (!gameState.inMaze) {
             print("❌ Start a maze first with start_maze()", 'error');
-            return;
+            return false;
         }
         
         if (!direction) {
-            print('❌ Usage: move("direction")', 'error');
+            print('❌ Usage: move("direction") or move("direction", count)', 'error');
             print('Directions: "north", "south", "east", "west"', 'system');
-            return;
+            return false;
         }
         
-        direction = direction.toLowerCase().replace(/['"]/g, '');
+        direction = String(direction).toLowerCase().replace(/['"]/g, '');
         const deltas = {
             'north': [0, -1],
             'south': [0, 1],
@@ -546,43 +546,55 @@ const commands = {
         
         if (!deltas[direction]) {
             print(`❌ Invalid direction: ${direction}`, 'error');
-            return;
+            return false;
         }
         
-        const [dx, dy] = deltas[direction];
-        const newX = mazeState.playerX + dx;
-        const newY = mazeState.playerY + dy;
+        // Handle count parameter for repeated moves
+        const steps = (count && typeof count === 'number' && count > 0) ? Math.floor(count) : 1;
         
-        mazeState.playerDir = direction;
-        
-        if (newX < 0 || newX >= mazeState.width || newY < 0 || newY >= mazeState.height) {
-            print("🚧 Hit the boundary!", 'error');
+        for (let step = 0; step < steps; step++) {
+            const [dx, dy] = deltas[direction];
+            const newX = mazeState.playerX + dx;
+            const newY = mazeState.playerY + dy;
+            
+            mazeState.playerDir = direction;
+            
+            if (newX < 0 || newX >= mazeState.width || newY < 0 || newY >= mazeState.height) {
+                print("🚧 Hit the boundary!", 'error');
+                drawMaze();
+                return false;
+            }
+            
+            if (mazeState.grid[newY][newX] === 1) {
+                print("🧱 Hit a wall!", 'error');
+                drawMaze();
+                return false;
+            }
+            
+            mazeState.playerX = newX;
+            mazeState.playerY = newY;
+            
+            if (steps > 1) {
+                print(`➡️ Moved ${direction} (${step + 1}/${steps})`, 'success');
+            } else {
+                print(`➡️ Moved ${direction}`, 'success');
+            }
             drawMaze();
-            return;
+            
+            // Check win condition
+            if (mazeState.playerX === mazeState.goalX && mazeState.playerY === mazeState.goalY) {
+                print("\n🎉 Congratulations! You reached the goal!", 'success');
+                addXP(100);
+                gameState.coins += 25;
+                print(`+100 XP, +25 coins!`, 'info');
+                print("Type start_maze() for a new maze!\n", 'system');
+                gameState.inMaze = false;
+                document.getElementById('maze-area').classList.add('hidden');
+                updatePetDisplay();
+                return true;
+            }
         }
-        
-        if (mazeState.grid[newY][newX] === 1) {
-            print("🧱 Hit a wall!", 'error');
-            drawMaze();
-            return;
-        }
-        
-        mazeState.playerX = newX;
-        mazeState.playerY = newY;
-        print(`➡️ Moved ${direction}`, 'success');
-        drawMaze();
-        
-        // Check win condition
-        if (mazeState.playerX === mazeState.goalX && mazeState.playerY === mazeState.goalY) {
-            print("\n🎉 Congratulations! You reached the goal!", 'success');
-            addXP(100);
-            gameState.coins += 25;
-            print(`+100 XP, +25 coins!`, 'info');
-            print("Type start_maze() for a new maze!\n", 'system');
-            gameState.inMaze = false;
-            document.getElementById('maze-area').classList.add('hidden');
-            updatePetDisplay();
-        }
+        return true;
     },
     
     at_wall: function() {
@@ -688,10 +700,17 @@ const commands = {
         print("   start_maze()    - Start maze game");
         print("   exit_maze()     - Leave maze");
         print('   move("dir")     - Move in direction');
+        print('   move("dir", n)  - Move n steps');
         print("   at_wall()       - Check if wall ahead");
         print('   can_move("dir") - Check if can move');
         print("   turn_left()     - Turn left");
         print("   turn_right()    - Turn right");
+        print("\n📜 Multi-line Scripts (press Shift+Enter for new line):");
+        print('   repeat(n):      - Repeat block n times');
+        print('   if <condition>: - Run block if true');
+        print("   Example:");
+        print('     repeat(3):');
+        print('       move("east")');
         print("\n📖 Learning:");
         print("   tutorial()      - Start tutorial");
         print("   hint()          - Get a hint");
@@ -803,7 +822,17 @@ function addXP(amount) {
 }
 
 // ==================== COMMAND PARSER ====================
-function parseCommand(input) {
+let scriptExecutor = null;
+let isExecutingScript = false;
+
+// Initialize the script executor when parser is loaded
+function initScriptExecutor() {
+    if (typeof window.ScriptParser !== 'undefined') {
+        scriptExecutor = window.ScriptParser.createExecutor(commands, print);
+    }
+}
+
+async function parseCommand(input) {
     const trimmed = input.trim();
     if (!trimmed) return;
     
@@ -812,10 +841,46 @@ function parseCommand(input) {
     if (gameState.commandHistory.length > 50) gameState.commandHistory.pop();
     gameState.historyIndex = -1;
     
-    // Echo command
-    print(`>>> ${trimmed}`);
+    // Echo command (show first line and indicate if multi-line)
+    const lines = trimmed.split('\n');
+    if (lines.length > 1) {
+        print(`>>> ${lines[0]}`);
+        for (let i = 1; i < lines.length; i++) {
+            print(`... ${lines[i]}`);
+        }
+    } else {
+        print(`>>> ${trimmed}`);
+    }
     
-    // Parse function call
+    // Check if we should use the multi-line parser
+    if (typeof window.ScriptParser !== 'undefined' && window.ScriptParser.isMultiLineScript(trimmed)) {
+        // Use the advanced parser for multi-line scripts
+        try {
+            if (!scriptExecutor) {
+                initScriptExecutor();
+            }
+            
+            const ast = window.ScriptParser.parseScript(trimmed);
+            isExecutingScript = true;
+            await scriptExecutor.execute(ast);
+            isExecutingScript = false;
+            
+            // Check tutorial progress
+            if (gameState.inTutorial) {
+                const step = tutorialSteps[gameState.tutorialStep];
+                if (step && step.check(trimmed)) {
+                    gameState.tutorialStep++;
+                    setTimeout(nextTutorialStep, 500);
+                }
+            }
+        } catch (e) {
+            isExecutingScript = false;
+            print(`❌ ${e.name || 'Error'}: ${e.message}`, 'error');
+        }
+        return;
+    }
+    
+    // Simple single-line function call parser (backward compatible)
     const match = trimmed.match(/^(\w+)\s*\(\s*([^)]*)\s*\)$/);
     
     if (!match) {
@@ -825,7 +890,7 @@ function parseCommand(input) {
             return;
         }
         print(`❌ SyntaxError: Invalid syntax`, 'error');
-        print(`Tip: Use function syntax like feed() or use_item("apple")`, 'system');
+        print(`Tip: Use function syntax like feed() or move("east", 3)`, 'system');
         return;
     }
     
@@ -837,15 +902,26 @@ function parseCommand(input) {
         return;
     }
     
-    // Parse argument
-    let parsedArg = null;
-    if (args) {
-        parsedArg = args.trim().replace(/^["']|["']$/g, '');
+    // Parse arguments (supports multiple arguments separated by comma)
+    const parsedArgs = [];
+    if (args.trim()) {
+        // Split by comma, but respect quoted strings
+        const argMatches = args.match(/(?:[^,'"]+|'[^']*'|"[^"]*")+/g) || [];
+        for (const arg of argMatches) {
+            const trimmedArg = arg.trim();
+            // Check if it's a number
+            if (/^-?\d+(\.\d+)?$/.test(trimmedArg)) {
+                parsedArgs.push(parseFloat(trimmedArg));
+            } else {
+                // String - remove quotes
+                parsedArgs.push(trimmedArg.replace(/^["']|["']$/g, ''));
+            }
+        }
     }
     
     // Execute command
     try {
-        commands[funcName](parsedArg);
+        commands[funcName](...parsedArgs);
         
         // Check tutorial progress
         if (gameState.inTutorial) {
@@ -876,18 +952,57 @@ function gameLoop() {
 }
 
 // ==================== EVENT HANDLERS ====================
+let multiLineMode = false;
+let multiLineBuffer = '';
+
 function setupEventHandlers() {
     terminalInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            parseCommand(terminalInput.value);
+        if (e.key === 'Enter' && e.shiftKey) {
+            // Shift+Enter: Add newline for multi-line input
+            e.preventDefault();
+            if (!multiLineMode) {
+                multiLineMode = true;
+                multiLineBuffer = terminalInput.value + '\n';
+                terminalInput.value = '';
+                terminalInput.placeholder = '... continue typing (Enter to run, Shift+Enter for more lines)';
+                print(`>>> ${multiLineBuffer.split('\n')[0]}`, 'system');
+            } else {
+                const line = terminalInput.value;
+                print(`... ${line}`, 'system');
+                multiLineBuffer += line + '\n';
+                terminalInput.value = '';
+            }
+        } else if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (multiLineMode) {
+                // Execute multi-line script
+                multiLineBuffer += terminalInput.value;
+                const script = multiLineBuffer;
+                multiLineMode = false;
+                multiLineBuffer = '';
+                terminalInput.value = '';
+                terminalInput.placeholder = 'Type Python commands here...';
+                // Execute the complete multi-line script
+                parseCommand(script);
+            } else {
+                parseCommand(terminalInput.value);
+                terminalInput.value = '';
+            }
+        } else if (e.key === 'Escape' && multiLineMode) {
+            // Cancel multi-line mode
+            e.preventDefault();
+            multiLineMode = false;
+            multiLineBuffer = '';
             terminalInput.value = '';
-        } else if (e.key === 'ArrowUp') {
+            terminalInput.placeholder = 'Type Python commands here...';
+            print('Multi-line input cancelled.', 'system');
+        } else if (e.key === 'ArrowUp' && !multiLineMode) {
             e.preventDefault();
             if (gameState.historyIndex < gameState.commandHistory.length - 1) {
                 gameState.historyIndex++;
                 terminalInput.value = gameState.commandHistory[gameState.historyIndex];
             }
-        } else if (e.key === 'ArrowDown') {
+        } else if (e.key === 'ArrowDown' && !multiLineMode) {
             e.preventDefault();
             if (gameState.historyIndex > 0) {
                 gameState.historyIndex--;
@@ -938,6 +1053,7 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
     initCanvas();
     setupEventHandlers();
+    initScriptExecutor();
     printWelcome();
     updatePetDisplay();
     gameLoop();
