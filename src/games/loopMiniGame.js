@@ -124,6 +124,10 @@ class MiniLexer {
                         this.indentStack.pop();
                         this.tokens.push({ type: TokenType.DEDENT, line: this.line, col: 1 });
                     }
+                    // Check if we landed on a valid indentation level
+                    if (this.indentStack[this.indentStack.length - 1] !== indent && this.indentStack.length > 0) {
+                        throw new SyntaxError(`Indentation error at line ${this.line}: inconsistent indentation`);
+                    }
                 }
                 
                 this.atLineStart = false;
@@ -748,7 +752,7 @@ class SnakePuzzle {
             this.moves++;
             return true;
         }
-        return false;
+        throw new Error('Cannot move up: already at the top edge!');
     }
 
     moveDown() {
@@ -757,7 +761,7 @@ class SnakePuzzle {
             this.moves++;
             return true;
         }
-        return false;
+        throw new Error('Cannot move down: already at the bottom edge!');
     }
 
     moveLeft() {
@@ -766,7 +770,7 @@ class SnakePuzzle {
             this.moves++;
             return true;
         }
-        return false;
+        throw new Error('Cannot move left: already at the left edge!');
     }
 
     moveRight() {
@@ -775,7 +779,7 @@ class SnakePuzzle {
             this.moves++;
             return true;
         }
-        return false;
+        throw new Error('Cannot move right: already at the right edge!');
     }
 
     getState() {
@@ -842,11 +846,11 @@ Available commands:
   - at_goal() - returns True if snake reached the apple
   - can_move_up(), can_move_down(), can_move_left(), can_move_right()
 
-Example solution:
-for i in range(${gridSize - 1}):
-    move_right()
-for i in range(${gridSize - 1}):
-    move_down()
+Example solution (use Shift+Enter for new lines):
+  for i in range(${gridSize - 1}):
+      move_right()
+  for i in range(${gridSize - 1}):
+      move_down()
     `);
     
     // Get user script
@@ -903,20 +907,24 @@ for i in range(${gridSize - 1}):
         // Check if snake reached the goal
         const success = puzzle.isAtGoal();
         
-        // Calculate reward based on efficiency
+        // Calculate reward - use a score that the mini-games manager can apply its bonus system to
         let reward = 0;
+        let score = 0;
         if (success) {
             const optimalMoves = (gridSize - 1) * 2; // Simple optimal path
             const efficiency = Math.max(0, 1 - (puzzle.moves - optimalMoves) / optimalMoves);
-            reward = Math.floor(20 + efficiency * 30); // Base 20 coins, up to 50 total
+            score = Math.floor(efficiency * 100); // Score 0-100 based on efficiency
+            // Base reward will be applied by mini-games manager
+            reward = 20; // Base reward, manager will add bonuses
         }
         
         const result = {
             success,
             reward,
+            score,
             details: {
                 message: success ? 
-                    `✅ Snake reached the apple in ${puzzle.moves} moves! Reward: ${reward} coins` :
+                    `✅ Snake reached the apple in ${puzzle.moves} moves! Score: ${score}/100` :
                     `❌ Snake didn't reach the apple. Try again!`,
                 moves: puzzle.moves,
                 finalPosition: { x: puzzle.snakeX, y: puzzle.snakeY },
