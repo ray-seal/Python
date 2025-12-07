@@ -719,6 +719,108 @@ const commands = {
         drawMaze();
     },
     
+    // Loop Mini-Game
+    start_loop_challenge: async function() {
+        if (!window.LoopMiniGame) {
+            print("❌ Loop mini-game not loaded!", 'error');
+            return;
+        }
+        
+        print("\n🎮 Starting Loop Challenge...\n", 'success');
+        
+        // Create UI helpers for the mini-game
+        const uiHelpers = {
+            showPrompt: (text) => {
+                print(text, 'info');
+            },
+            getInput: async () => {
+                print("\n✍️ Enter your script (use Shift+Enter for new lines, then Enter to submit):", 'system');
+                print("Type 'cancel' to cancel the challenge.\n", 'system');
+                
+                // Return a promise that resolves when user enters script
+                return new Promise((resolve) => {
+                    const originalHandler = terminalInput.onkeydown;
+                    let scriptLines = [];
+                    let isMultiLine = false;
+                    
+                    terminalInput.onkeydown = function(e) {
+                        if (e.key === 'Enter' && e.shiftKey) {
+                            e.preventDefault();
+                            scriptLines.push(terminalInput.value);
+                            print(`>>> ${terminalInput.value}`, 'input');
+                            terminalInput.value = '';
+                            isMultiLine = true;
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const currentLine = terminalInput.value;
+                            
+                            if (currentLine.toLowerCase() === 'cancel') {
+                                print(">>> cancel", 'input');
+                                terminalInput.onkeydown = originalHandler;
+                                resolve('');
+                                terminalInput.value = '';
+                                return;
+                            }
+                            
+                            if (isMultiLine) {
+                                scriptLines.push(currentLine);
+                                print(`>>> ${currentLine}`, 'input');
+                            } else {
+                                scriptLines = [currentLine];
+                                print(`>>> ${currentLine}`, 'input');
+                            }
+                            
+                            const fullScript = scriptLines.join('\n');
+                            terminalInput.onkeydown = originalHandler;
+                            resolve(fullScript);
+                            terminalInput.value = '';
+                            scriptLines = [];
+                            isMultiLine = false;
+                        }
+                    };
+                });
+            },
+            showResult: (result) => {
+                if (result.details && result.details.message) {
+                    print(`\n${result.details.message}`, result.success ? 'success' : 'error');
+                }
+                if (result.details && result.details.grid) {
+                    print(`\nFinal State:\n${result.details.grid}`, 'info');
+                }
+                if (result.success && result.reward > 0) {
+                    gameState.coins += result.reward;
+                    addXP(result.reward);
+                    updatePetDisplay();
+                }
+            }
+        };
+        
+        try {
+            // Start game in mini-games manager
+            if (terminalIntegration) {
+                terminalIntegration.startGame('loop_challenge');
+            }
+            
+            // Run the mini-game
+            const result = await window.LoopMiniGame.runLoopMiniGame(uiHelpers, { gridSize: 5 });
+            
+            // End game in mini-games manager
+            if (terminalIntegration && result) {
+                terminalIntegration.endGame('loop_challenge', { 
+                    won: result.success, 
+                    score: result.reward || 0 
+                });
+            }
+            
+            print("\n💡 Try again with start_loop_challenge() or try start_maze()!\n", 'system');
+        } catch (error) {
+            print(`\n❌ Error running loop challenge: ${error.message}`, 'error');
+            if (terminalIntegration) {
+                terminalIntegration.endGame('loop_challenge', { won: false, abandoned: true });
+            }
+        }
+    },
+    
     // Help and Tutorial
     help: function() {
         print("\n📚 Available Commands:", 'info');
@@ -734,14 +836,15 @@ const commands = {
         print("   shop()          - View shop");
         print('   buy("x")        - Buy an item');
         print("\n🎮 Mini Games:");
-        print("   start_maze()    - Start maze game");
-        print("   exit_maze()     - Leave maze");
-        print('   move("dir")     - Move in direction');
-        print('   move("dir", n)  - Move n steps');
-        print("   at_wall()       - Check if wall ahead");
-        print('   can_move("dir") - Check if can move');
-        print("   turn_left()     - Turn left");
-        print("   turn_right()    - Turn right");
+        print("   start_maze()           - Start maze game");
+        print("   start_loop_challenge() - Loop programming challenge");
+        print("   exit_maze()            - Leave maze");
+        print('   move("dir")            - Move in direction');
+        print('   move("dir", n)         - Move n steps');
+        print("   at_wall()              - Check if wall ahead");
+        print('   can_move("dir")        - Check if can move');
+        print("   turn_left()            - Turn left");
+        print("   turn_right()           - Turn right");
         print("\n📜 Multi-line Scripts (press Shift+Enter for new line):");
         print('   repeat(n):      - Repeat block n times');
         print('   if <condition>: - Run block if true');
@@ -768,6 +871,7 @@ const commands = {
             "Check your snake's status with status()",
             "You can buy items from the shop() and use_item()",
             "Play the maze game with start_maze()",
+            "Try the loop challenge with start_loop_challenge()",
             "In the maze, use move('north') to move up",
             "Check for walls with at_wall() before moving",
             "Keep your snake happy by playing with them!"
