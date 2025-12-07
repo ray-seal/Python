@@ -114,6 +114,15 @@ class TerminalIntegration {
             maxBonus: 50
         });
         
+        this.miniGamesManager.registerGame('loop_challenge', {
+            name: 'Loop Challenge',
+            description: 'Learn loops and conditionals by guiding a snake',
+            baseReward: 20,
+            baseXP: 80,
+            bonusMultiplier: 1.5,
+            maxBonus: 30
+        });
+        
         // Future games can be registered here
         // this.miniGamesManager.registerGame('snake', { ... });
     }
