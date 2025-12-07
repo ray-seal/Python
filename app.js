@@ -739,43 +739,44 @@ const commands = {
                 
                 // Return a promise that resolves when user enters script
                 return new Promise((resolve) => {
-                    const originalHandler = terminalInput.onkeydown;
                     let scriptLines = [];
                     let isMultiLine = false;
                     
-                    terminalInput.onkeydown = function(e) {
-                        if (e.key === 'Enter' && e.shiftKey) {
-                            e.preventDefault();
-                            scriptLines.push(terminalInput.value);
-                            print(`>>> ${terminalInput.value}`, 'input');
-                            terminalInput.value = '';
-                            isMultiLine = true;
-                        } else if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const currentLine = terminalInput.value;
-                            
-                            if (currentLine.toLowerCase() === 'cancel') {
-                                print(">>> cancel", 'input');
-                                terminalInput.onkeydown = originalHandler;
-                                resolve('');
+                    customInputHandler = {
+                        handler: function(e) {
+                            if (e.key === 'Enter' && e.shiftKey) {
+                                e.preventDefault();
+                                scriptLines.push(terminalInput.value);
+                                print(`>>> ${terminalInput.value}`, 'input');
                                 terminalInput.value = '';
-                                return;
+                                isMultiLine = true;
+                            } else if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const currentLine = terminalInput.value;
+                                
+                                if (currentLine.toLowerCase() === 'cancel') {
+                                    print(">>> cancel", 'input');
+                                    customInputHandler = null;
+                                    resolve('');
+                                    terminalInput.value = '';
+                                    return;
+                                }
+                                
+                                if (isMultiLine) {
+                                    scriptLines.push(currentLine);
+                                    print(`>>> ${currentLine}`, 'input');
+                                } else {
+                                    scriptLines = [currentLine];
+                                    print(`>>> ${currentLine}`, 'input');
+                                }
+                                
+                                const fullScript = scriptLines.join('\n');
+                                customInputHandler = null;
+                                resolve(fullScript);
+                                terminalInput.value = '';
+                                scriptLines = [];
+                                isMultiLine = false;
                             }
-                            
-                            if (isMultiLine) {
-                                scriptLines.push(currentLine);
-                                print(`>>> ${currentLine}`, 'input');
-                            } else {
-                                scriptLines = [currentLine];
-                                print(`>>> ${currentLine}`, 'input');
-                            }
-                            
-                            const fullScript = scriptLines.join('\n');
-                            terminalInput.onkeydown = originalHandler;
-                            resolve(fullScript);
-                            terminalInput.value = '';
-                            scriptLines = [];
-                            isMultiLine = false;
                         }
                     };
                 });
@@ -1095,9 +1096,16 @@ function gameLoop() {
 // ==================== EVENT HANDLERS ====================
 let multiLineMode = false;
 let multiLineBuffer = '';
+let customInputHandler = null; // For mini-games to override input handling
 
 function setupEventHandlers() {
     terminalInput.addEventListener('keydown', (e) => {
+        // Allow mini-games to override input handling
+        if (customInputHandler && customInputHandler.handler) {
+            customInputHandler.handler(e);
+            return; // Don't process the normal handler
+        }
+        
         if (e.key === 'Enter' && e.shiftKey) {
             // Shift+Enter: Add newline for multi-line input
             e.preventDefault();
