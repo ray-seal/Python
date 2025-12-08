@@ -182,7 +182,7 @@ async function start_loop() {
         }
     } else {
         print("❌ Loop mini-game not yet loaded!", 'error');
-        print("💡 Try using start_loop_challenge() instead.", 'info');
+        print("💡 Note: start_loop() and start_loop_challenge() both launch the same game.", 'info');
     }
 }
 
