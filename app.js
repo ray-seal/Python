@@ -822,6 +822,39 @@ const commands = {
         }
     },
     
+    // Mini Game Wrappers
+    start_typing: async function() {
+        if (window.start_typing && typeof window.start_typing === 'function') {
+            await window.start_typing();
+        } else {
+            print("❌ Typing mini-game wrapper not loaded!", 'error');
+        }
+    },
+    
+    start_quick_math: async function() {
+        if (window.start_quick_math && typeof window.start_quick_math === 'function') {
+            await window.start_quick_math();
+        } else {
+            print("❌ Quick math mini-game wrapper not loaded!", 'error');
+        }
+    },
+    
+    start_loop: async function() {
+        if (window.start_loop && typeof window.start_loop === 'function') {
+            await window.start_loop();
+        } else {
+            print("❌ Loop mini-game wrapper not loaded!", 'error');
+        }
+    },
+    
+    start_random_mini_game: async function() {
+        if (window.start_random_mini_game && typeof window.start_random_mini_game === 'function') {
+            await window.start_random_mini_game();
+        } else {
+            print("❌ Random mini-game wrapper not loaded!", 'error');
+        }
+    },
+    
     // Help and Tutorial
     help: function() {
         print("\n📚 Available Commands:", 'info');
@@ -838,8 +871,12 @@ const commands = {
         print('   buy("x")        - Buy an item');
         print("\n🎮 Mini Games:");
         print("   start_maze()           - Start maze game");
-        print("   start_loop_challenge() - Loop programming challenge");
         print("   exit_maze()            - Leave maze");
+        print("   start_typing()         - Play typing mini-game");
+        print("   start_quick_math()     - Play quick math mini-game");
+        print("   start_loop()           - Play loop mini-game (teaches for/while/if/elif/else)");
+        print("   start_random_mini_game() - Play a random mini-game");
+        print("   start_loop_challenge() - Loop programming challenge");
         print('   move("dir")            - Move in direction');
         print('   move("dir", n)         - Move n steps');
         print("   at_wall()              - Check if wall ahead");
