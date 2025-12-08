@@ -71,16 +71,22 @@ shop()              # View available items
 buy("mouse")        # Buy an item
 ```
 
-### Maze Mini Game
+### Mini Games
 ```python
 start_maze()        # Start maze game
+exit_maze()         # Leave maze game
+start_typing()      # Play typing mini-game
+start_quick_math()  # Play quick math mini-game
+start_loop()        # Play loop mini-game (teaches for/while/if/elif/else)
+start_random_mini_game() # Play a random mini-game
+
+# Maze game commands
 move("north")       # Move in a direction (north/south/east/west)
 move("east", 3)     # Move 3 steps east
 at_wall()           # Check if wall ahead
 can_move("east")    # Check if can move in direction
 turn_left()         # Turn left
 turn_right()        # Turn right
-exit_maze()         # Leave maze game
 ```
 
 ### Multi-line Scripts (Press Shift+Enter for new lines)
